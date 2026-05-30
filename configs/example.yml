@@ -1,0 +1,55 @@
+# Template for a new digest. Copy this file, rename it (e.g. configs/my-friend.yml),
+# change the values, add the matching secrets in GitHub, and you have a new digest —
+# no code changes required.
+
+name: Example Digest
+language: en
+timezone: UTC
+
+sources:
+  - name: Hacker News Front Page
+    type: rss
+    url: https://hnrss.org/frontpage
+
+  - name: A Telegram channel via RSSHub
+    type: rss
+    url: https://rsshub.app/telegram/channel/durov
+    enabled: false          # disable a source without deleting it
+    # max_items: 5          # optional per-source cap
+
+audience:
+  - curious readers
+
+topics:
+  - technology
+  - startups
+
+filters:
+  lookback_hours: 24
+  max_items_per_source: 10
+  max_items_total: 20
+
+state:
+  type: none                # or 'json' for persistent cross-run dedup
+  # path: state/seen.json
+  # retention_days: 14
+
+llm:
+  provider: openrouter      # swap for another registered adapter later
+  model: openai/gpt-4o-mini
+  api_key_env: OPENROUTER_API_KEY
+  temperature: 0.3
+  max_tokens: 400
+  batch_size: 8
+
+delivery:
+  type: telegram
+  telegram:
+    bot_token_env: TELEGRAM_BOT_TOKEN
+    chat_id_env: TELEGRAM_CHAT_ID
+  # save_to_dir: digests
+
+render:
+  include_links: true
+  include_source: true
+  group_by_source: false

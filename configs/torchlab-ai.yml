@@ -1,0 +1,61 @@
+name: TorchLab AI Digest
+language: ru
+timezone: Europe/Moscow
+
+sources:
+  - name: Hugging Face Papers
+    type: rss
+    url: https://huggingface.co/papers/rss
+
+  - name: эйай ньюз
+    type: rss
+    url: https://rsshub.app/telegram/channel/ai_newz
+
+  - name: Hi, AI
+    type: rss
+    url: https://rsshub.app/telegram/channel/hiaimedia
+
+audience:
+  - AI engineers
+  - developers
+  - founders
+
+topics:
+  - LLMs
+  - AI agents
+  - RAG
+  - open-source models
+  - developer tools
+
+# Only consider items published in the last N hours (this is the primary
+# "freshness" mechanism — the cron runs daily, so 24h matches the cadence).
+filters:
+  lookback_hours: 24
+  max_items_per_source: 15
+  max_items_total: 30
+
+# Cross-run dedup. 'none' relies only on the time window above.
+# Switch to 'json' (and let CI commit state/seen.json) to never repeat an item.
+state:
+  type: none
+
+llm:
+  provider: openrouter
+  model: openai/gpt-4o-mini
+  api_key_env: OPENROUTER_API_KEY
+  temperature: 0.3
+  max_tokens: 500
+  batch_size: 8
+
+delivery:
+  type: telegram
+  telegram:
+    bot_token_env: TELEGRAM_BOT_TOKEN
+    chat_id_env: TELEGRAM_CHAT_ID
+  # Archive each digest as markdown (also produced in dry-run).
+  save_to_dir: digests
+
+render:
+  include_links: true
+  include_source: true
+  group_by_source: false
