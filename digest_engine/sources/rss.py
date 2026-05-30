@@ -59,7 +59,7 @@ def _fetch_raw(url: str) -> tuple[int, str, str]:
     """Fetch URL with a browser-like UA. Returns (status, content_type, body)."""
     with httpx.Client(
         follow_redirects=True,
-        timeout=30,
+        timeout=60,
         headers={"User-Agent": _USER_AGENT},
     ) as client:
         resp = client.get(url)
