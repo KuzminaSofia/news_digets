@@ -25,6 +25,16 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    services:
+      rsshub:
+        image: diygod/rsshub:latest
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3000/healthz || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 6
     env:
       CONFIG_NAME: ${{ github.event.inputs.config_name || 'torchlab-ai' }}
       DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}

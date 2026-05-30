@@ -9,11 +9,11 @@ sources:
 
   - name: эйай ньюз
     type: rss
-    url: https://rsshub.app/telegram/channel/ai_newz
+    url: http://localhost:3000/telegram/channel/ai_newz
 
   - name: Hi, AI
     type: rss
-    url: https://rsshub.app/telegram/channel/hiaimedia
+    url: http://localhost:3000/telegram/channel/hiaimedia
 
 audience:
   - AI engineers
