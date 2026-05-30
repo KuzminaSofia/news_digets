@@ -1,0 +1,61 @@
+# Two-part stack:
+#   * rsshub  — long-running service that turns Telegram channels (and more)
+#               into RSS feeds. Replaces the public rsshub.app instance that
+#               was returning 403. Listens on port 1200 (RSSHub default).
+#   * digest  — the one-shot job. It is gated behind the "job" profile so it
+#               does NOT start with `docker compose up`. Run it on demand:
+#                   docker compose run --rm digest --dry-run         # local check
+#                   docker compose run --rm digest                   # real run
+#               On the server, a host cron entry calls the same command.
+#
+# Local quick start:
+#   cp .env.example .env        # fill in OPENROUTER / TELEGRAM secrets
+#   docker compose up -d rsshub
+#   docker compose run --rm digest --config configs/torchlab-ai.yml --dry-run
+
+name: torchlab-digest
+
+services:
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: torchlab-rsshub
+    restart: unless-stopped
+    ports:
+      # Exposed on the host only for debugging the feeds in a browser, e.g.
+      # http://localhost:1200/telegram/channel/ai_newz . The digest container
+      # reaches RSSHub over the internal network as http://rsshub:1200 and does
+      # not depend on this mapping.
+      - "127.0.0.1:1200:1200"
+    environment:
+      NODE_ENV: production
+      # In-memory cache is plenty for a once-a-day batch job (no Redis needed).
+      CACHE_TYPE: memory
+      # Cache successful feed fetches for an hour.
+      CACHE_EXPIRE: "3600"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  digest:
+    build: .
+    image: digest-engine:latest
+    # Secrets (OPENROUTER_API_KEY, TELEGRAM_*) come from .env.
+    env_file:
+      - .env
+    environment:
+      # Point the engine at the in-stack RSSHub instead of localhost.
+      RSSHUB_BASE_URL: http://rsshub:1200
+    depends_on:
+      rsshub:
+        condition: service_healthy
+    volumes:
+      # Persist archived digests and (optional) cross-run dedup state on the host.
+      - ./digests:/app/digests
+      - ./state:/app/state
+    # Default command; override per-run, e.g. `... run --rm digest --dry-run`.
+    command: ["--config", "configs/torchlab-ai.yml"]
+    # Keep this service out of `docker compose up`; it is a job, run on demand.
+    profiles: ["job"]

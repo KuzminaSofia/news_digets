@@ -1,9 +1,9 @@
 # digest-engine
 
 A small, config-driven news digest engine. It fetches RSS sources, summarizes fresh
-items with an LLM, and delivers a digest to Telegram. Designed to run on a schedule via
-GitHub Actions, but the core is decoupled from CI so it runs equally well locally or in
-Docker.
+items with an LLM, and delivers a digest to Telegram. It runs as a Dockerized job on a
+schedule (host cron) alongside a self-hosted RSSHub instance, and runs equally well
+locally for testing.
 
 The whole product is driven by a single YAML config. To run a digest for someone else,
 copy a config, change a few values, add their secrets — no code changes.
@@ -33,9 +33,9 @@ URL/title.
 
 For feeds that don't set publish dates or that re-surface old items, there's an optional
 persistent layer — set `state.type: json` and the engine remembers delivered item hashes
-in `state/seen.json`. The included workflow commits that file back so it carries across
-runs. The `StateStore` interface (`digest_engine/state.py`) makes it easy to add SQLite,
-Redis, etc. later.
+in `state/seen.json`. In Docker the `./state` directory is mounted as a volume, so that
+file persists across runs on the host. The `StateStore` interface
+(`digest_engine/state.py`) makes it easy to add SQLite, Redis, etc. later.
 
 ## Configuration
 
@@ -58,23 +58,52 @@ python scripts/run_digest.py --config configs/torchlab-ai.yml --dry-run
 python scripts/run_digest.py --config configs/torchlab-ai.yml
 ```
 
-## Running in Docker
+Note: the Telegram sources resolve through RSSHub. Without Docker you need a local
+RSSHub on `http://localhost:1200` (the config's default), otherwise those sources are
+skipped. The Docker workflow below starts RSSHub for you — that's the recommended path.
+
+## Running in Docker (recommended)
+
+The stack has two parts (see `docker-compose.yml`):
+
+- **rsshub** — a self-hosted [RSSHub](https://docs.rsshub.app) instance on port `1200`
+  that turns Telegram channels into RSS feeds. It replaces the public `rsshub.app`
+  instance, which is rate-limited and returns `403`.
+- **digest** — the one-shot job. It's behind the `job` profile, so it does **not**
+  start with `docker compose up`; you run it on demand.
 
 ```bash
-docker build -t digest-engine .
-docker run --rm --env-file .env digest-engine --config configs/torchlab-ai.yml --dry-run
+cp .env.example .env            # fill in OPENROUTER / TELEGRAM secrets
+
+docker compose up -d rsshub     # start RSSHub (stays running)
+
+# Preview without delivering:
+docker compose run --rm digest --config configs/torchlab-ai.yml --dry-run
+
+# Real run (delivers to Telegram, archives to ./digests):
+docker compose run --rm digest --config configs/torchlab-ai.yml
 ```
 
-## Running in GitHub Actions
+The digest container reaches RSSHub over the internal network via
+`RSSHUB_BASE_URL=http://rsshub:1200` (injected by compose). To eyeball a feed directly,
+RSSHub is also exposed on the host: `http://localhost:1200/telegram/channel/ai_newz`.
 
-The workflow `.github/workflows/digest.yml` runs daily at 06:00 MSK and supports manual
-runs (`workflow_dispatch`) with `config_name` and `dry_run` inputs.
+## Deploying to a VPS
 
-Add these repository secrets (Settings → Secrets and variables → Actions):
+1. Install Docker Engine + the Compose plugin, then clone the repo (e.g. to
+   `/opt/news_digets`).
+2. Create `.env` from `.env.example` and fill in the secrets.
+3. Start RSSHub: `docker compose up -d rsshub`.
+4. Smoke-test once: `docker compose run --rm digest --config configs/torchlab-ai.yml --dry-run`.
+5. Schedule the daily run with host cron (`crontab -e`) — 06:00 MSK = 03:00 UTC:
 
-- `OPENROUTER_API_KEY` — required
-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` — required
-- `OPENROUTER_REFERER`, `OPENROUTER_TITLE` — optional (OpenRouter attribution)
+   ```cron
+   0 3 * * *  /opt/news_digets/scripts/cron-digest.sh >> /var/log/news-digest.log 2>&1
+   ```
+
+   `scripts/cron-digest.sh` ensures RSSHub is up and runs one digest, then exits. Pass a
+   config name as the first argument to run a different digest
+   (e.g. `cron-digest.sh my-friend`).
 
 `TELEGRAM_CHAT_ID` is your chat/channel id. For a channel, add the bot as an admin and
 use the `-100...` id; for a personal chat, message the bot and read the id from
@@ -83,8 +112,9 @@ use the `-100...` id; for a personal chat, message the bot and read the id from
 ## Adding a digest for someone else
 
 1. Copy `configs/example.yml` to `configs/<name>.yml` and edit sources/topics/audience.
-2. Add their secrets to the repo (or a fork).
-3. Run manually with `config_name: <name>`, or add another cron schedule.
+2. Make sure the secrets it references exist in `.env`.
+3. Run it: `docker compose run --rm digest --config configs/<name>.yml`, and add a cron
+   line for it (the script takes the config name as an argument).
 
 ## Adding a new LLM provider (example)
 
