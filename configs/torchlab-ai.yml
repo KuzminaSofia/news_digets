@@ -5,7 +5,7 @@ timezone: Europe/Moscow
 sources:
   - name: Hugging Face Papers
     type: rss
-    url: https://huggingface.co/papers/rss
+    url: https://papers.takara.ai/api/feed
 
   - name: эйай ньюз
     type: rss
