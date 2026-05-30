@@ -29,9 +29,9 @@ jobs:
       rsshub:
         image: diygod/rsshub:latest
         ports:
-          - 3000:3000
+          - 1200:1200
         options: >-
-          --health-cmd "wget -qO- http://localhost:3000/healthz || exit 1"
+          --health-cmd "wget -qO- http://localhost:1200/healthz || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 6
