@@ -18,7 +18,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-_ENV_PATTERN = re.compile(r"\$\{([A-Z0-9_]+)\}")
+# Supports ${VAR} and ${VAR:-default} (default used when VAR is unset or empty).
+_ENV_PATTERN = re.compile(r"\$\{([A-Z0-9_]+)(?::-([^}]*))?\}")
 
 
 class SourceConfig(BaseModel):
@@ -112,7 +113,14 @@ class Config(BaseModel):
 def _interpolate_env(value: Any) -> Any:
     """Recursively replace ${ENV_VAR} occurrences in strings with env values."""
     if isinstance(value, str):
-        return _ENV_PATTERN.sub(lambda m: os.environ.get(m.group(1), ""), value)
+        def _replace(m: re.Match) -> str:
+            name, default = m.group(1), m.group(2)
+            env_val = os.environ.get(name, "")
+            if env_val:
+                return env_val
+            return default if default is not None else ""
+
+        return _ENV_PATTERN.sub(_replace, value)
     if isinstance(value, list):
         return [_interpolate_env(v) for v in value]
     if isinstance(value, dict):

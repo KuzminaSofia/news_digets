@@ -9,11 +9,13 @@ sources:
 
   - name: эйай ньюз
     type: rss
-    url: http://localhost:3000/telegram/channel/ai_newz
+    # RSSHUB_BASE_URL is injected by docker-compose (http://rsshub:1200).
+    # Falls back to a local RSSHub instance for non-Docker runs.
+    url: ${RSSHUB_BASE_URL:-http://localhost:1200}/telegram/channel/ai_newz
 
   - name: Hi, AI
     type: rss
-    url: http://localhost:3000/telegram/channel/hiaimedia
+    url: ${RSSHUB_BASE_URL:-http://localhost:1200}/telegram/channel/hiaimedia
 
 audience:
   - AI engineers

@@ -1,5 +1,5 @@
 # Template for a new digest. Copy this file, rename it (e.g. configs/my-friend.yml),
-# change the values, add the matching secrets in GitHub, and you have a new digest —
+# change the values, add the matching secrets to .env, and you have a new digest —
 # no code changes required.
 
 name: Example Digest
@@ -13,7 +13,9 @@ sources:
 
   - name: A Telegram channel via RSSHub
     type: rss
-    url: https://rsshub.app/telegram/channel/durov
+    # Use the self-hosted RSSHub (docker-compose sets RSSHUB_BASE_URL=http://rsshub:1200).
+    # The public rsshub.app instance is heavily rate-limited and often returns 403.
+    url: ${RSSHUB_BASE_URL:-http://localhost:1200}/telegram/channel/durov
     enabled: false          # disable a source without deleting it
     # max_items: 5          # optional per-source cap
 
