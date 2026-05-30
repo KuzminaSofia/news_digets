@@ -51,7 +51,7 @@ class StateConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     provider: str = "openrouter"
-    model: str = "openai/gpt-4o-mini"
+    model: str = "qwen/qwen-2.5-72b-instruct"
     api_key_env: str = "OPENROUTER_API_KEY"
     base_url: str | None = None
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)

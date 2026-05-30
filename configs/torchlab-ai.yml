@@ -41,7 +41,7 @@ state:
 
 llm:
   provider: openrouter
-  model: openai/gpt-4o-mini
+  model: qwen/qwen-2.5-72b-instruct
   api_key_env: OPENROUTER_API_KEY
   temperature: 0.3
   max_tokens: 500
